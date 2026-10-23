@@ -117,6 +117,7 @@ export function onPinnedChange(handler: () => void): () => void {
   const wrapped = () => handler();
   // Another tab wrote the list, or cleared storage (key === null).
   const onStorage = (e: StorageEvent) => {
+    if (e.storageArea !== localStorage) return;
     if (e.key !== null && e.key !== STORAGE_KEY) return;
     invalidateCache();
     handler();
