@@ -57,7 +57,7 @@ describe('pinned webcams store external sync', () => {
   it('notifies and serves fresh data on a storage event for its key', () => {
     const { handler } = subscribe();
     primeThenRewrite();
-    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }));
+    window.dispatchEvent(new StorageEvent('storage', { storageArea: localStorage, key: STORAGE_KEY }));
     expect(handler).toHaveBeenCalledTimes(1);
     expect(ids()).toEqual(['new-cam']);
   });
@@ -65,17 +65,26 @@ describe('pinned webcams store external sync', () => {
   it('notifies on a storage event with a null key (storage cleared)', () => {
     const { handler } = subscribe();
     primeThenRewrite();
-    window.dispatchEvent(new StorageEvent('storage', { key: null }));
+    localStorage.clear();
+    window.dispatchEvent(new StorageEvent('storage', { storageArea: localStorage, key: null }));
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(ids()).toEqual(['new-cam']);
+    expect(ids()).toEqual([]);
   });
 
   it('ignores storage events for unrelated keys', () => {
     const { handler } = subscribe();
     primeThenRewrite();
-    window.dispatchEvent(new StorageEvent('storage', { key: 'worldmonitor-theme' }));
+    window.dispatchEvent(new StorageEvent('storage', { storageArea: localStorage, key: 'worldmonitor-theme' }));
     expect(handler).not.toHaveBeenCalled();
     // Cache was not invalidated, so the primed list is still served this frame.
+    expect(ids()).toEqual(['old-cam']);
+  });
+
+  it.each([null, STORAGE_KEY])('ignores session-storage events for key %s', key => {
+    const { handler } = subscribe();
+    primeThenRewrite();
+    window.dispatchEvent(new StorageEvent('storage', { storageArea: sessionStorage, key }));
+    expect(handler).not.toHaveBeenCalled();
     expect(ids()).toEqual(['old-cam']);
   });
 
@@ -99,7 +108,7 @@ describe('pinned webcams store external sync', () => {
   it('stops notifying after unsubscribe', () => {
     const { handler, dispose } = subscribe();
     dispose();
-    window.dispatchEvent(new StorageEvent('storage', { key: STORAGE_KEY }));
+    window.dispatchEvent(new StorageEvent('storage', { storageArea: localStorage, key: STORAGE_KEY }));
     window.dispatchEvent(new CustomEvent(CLOUD_PREFS_APPLIED_EVENT, { detail: { keys: [STORAGE_KEY] } }));
     window.dispatchEvent(new CustomEvent('wm-pinned-webcams-changed'));
     expect(handler).not.toHaveBeenCalled();
